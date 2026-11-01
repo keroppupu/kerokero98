@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-render_illustrated_shorts_mv.py - YouTube Shorts 9:16 Illustrated MV with Scene Switching & Cross-Fading
+render_illustrated_shorts_mv.py - YouTube Shorts 9:16 Illustrated MV
+歌詞のみ表示 ＆ Whisper精密同期版
 """
 import os
 import sys
@@ -20,6 +21,7 @@ IMG1_PATH = os.path.join(BASE_DIR, "assets", "chara_happy.jpg")
 IMG2_PATH = os.path.join(BASE_DIR, "assets", "chara_panic.jpg")
 AUDIO_PATH = os.path.join(BASE_DIR, "hairan_dani_full_lyrics.mp3")
 OUTPUT_PATH = os.path.join(BASE_DIR, "hairan_dani_shorts_mv.mp4")
+DOWNLOADS_OUTPUT_PATH = "/Users/pupu/Downloads/hairan_dani_shorts_mv.mp4"
 FRAMES_DIR = "/tmp/mv_illustrated_frames"
 
 FONT_TSUKUSHI = "/System/Library/AssetsV2/com_apple_MobileAsset_Font8/60484a5d6f3fa8d51dcbeff43b7e70c9d42bcd2f.asset/AssetData/TsukushiBMaruGothic.ttc"
@@ -32,227 +34,197 @@ def get_font(size):
     except Exception:
         return ImageFont.load_default()
 
-# タイムライン設計 (秒単位)
+# Whisper実測同期タイムライン (秒単位)
+# 歌詞以外の文字は一切含めず、純粋な歌詞のみ
 TIMELINE = [
-    # Verse 1: 行きはスッキリ入ったのに...
+    # 0.0 - 0.92s: 前奏
     {
-        "start": 0.0, "end": 2.2, "img": 1, "trans": "fade", "fade_dur": 0.4, "zoom": 1.02,
-        "tag": "🎒 キャンプ準備完了！",
-        "top": "＼ スッポリ入って余裕の笑顔 ／",
-        "bottom": "行きは入った荷物が",
+        "start": 0.0, "end": 0.92,
+        "img": 1, "trans": "fade", "fade_dur": 0.3, "zoom": 1.0,
+        "lyrics": "",
         "theme": "pink"
     },
+    # 0.92 - 3.96s: 行きは入った荷物が
     {
-        "start": 2.2, "end": 4.5, "img": 2, "trans": "cut", "zoom": 1.10,
-        "tag": "💦 撤収時の悲劇",
-        "top": "えっ…チャックが閉まらん！？",
-        "bottom": "帰りは入らんだに！",
+        "start": 0.92, "end": 3.96,
+        "img": 1, "trans": "cut", "zoom": 1.03,
+        "lyrics": "行きは入った荷物が",
+        "theme": "pink"
+    },
+    # 3.96 - 5.50s: 帰りは入らんだに！
+    {
+        "start": 3.96, "end": 5.50,
+        "img": 2, "trans": "cut", "zoom": 1.10,
+        "lyrics": "帰りは入らんだに！",
         "theme": "red"
     },
+    # 5.50 - 8.64s: 行きは入った荷物が
     {
-        "start": 4.5, "end": 6.8, "img": 1, "trans": "fade", "fade_dur": 0.25, "zoom": 1.03,
-        "tag": "🤔 思い出してみて？",
-        "top": "来る時は余裕で入ったじゃん！",
-        "bottom": "行きは入った荷物が",
+        "start": 5.50, "end": 8.64,
+        "img": 1, "trans": "fade", "fade_dur": 0.25, "zoom": 1.03,
+        "lyrics": "行きは入った荷物が",
         "theme": "cyan"
     },
+    # 8.64 - 10.20s: 帰りは入らんだに！
     {
-        "start": 6.8, "end": 9.2, "img": 2, "trans": "cut", "zoom": 1.12,
-        "tag": "😱 現実逃避したい",
-        "top": "どう見ても膨らんどる…！",
-        "bottom": "帰りは入らんだに！",
+        "start": 8.64, "end": 10.20,
+        "img": 2, "trans": "cut", "zoom": 1.12,
+        "lyrics": "帰りは入らんだに！",
         "theme": "orange"
     },
-    # Verse 2: 高速押し込みバトル！
+    # 10.20 - 11.00s: 入った！
     {
-        "start": 9.2, "end": 10.3, "img": 1, "trans": "cut", "zoom": 1.12,
-        "tag": "⭕ 押し込め！",
-        "top": "よし、イケるぞ！",
-        "bottom": "入った！",
+        "start": 10.20, "end": 11.00,
+        "img": 1, "trans": "cut", "zoom": 1.12,
+        "lyrics": "入った！",
         "theme": "mint"
     },
+    # 11.00 - 11.84s: 入らん！
     {
-        "start": 10.3, "end": 11.5, "img": 2, "trans": "cut", "zoom": 1.15,
-        "tag": "❌ 弾き出された！",
-        "top": "跳ね返ってきた！！",
-        "bottom": "入らん！",
+        "start": 11.00, "end": 11.84,
+        "img": 2, "trans": "cut", "zoom": 1.15,
+        "lyrics": "入らん！",
         "theme": "red"
     },
+    # 11.84 - 12.65s: 入った！
     {
-        "start": 11.5, "end": 12.7, "img": 1, "trans": "cut", "zoom": 1.12,
-        "tag": "⭕ もう一回！",
-        "top": "ねじ込めーーッ！",
-        "bottom": "入った！",
+        "start": 11.84, "end": 12.65,
+        "img": 1, "trans": "cut", "zoom": 1.12,
+        "lyrics": "入った！",
         "theme": "yellow"
     },
+    # 12.65 - 14.50s: 入らん！
     {
-        "start": 12.7, "end": 13.9, "img": 2, "trans": "cut", "zoom": 1.18,
-        "tag": "❌ 限界突破！",
-        "top": "絶対無理だに！！",
-        "bottom": "入らん！",
+        "start": 12.65, "end": 14.50,
+        "img": 2, "trans": "cut", "zoom": 1.16,
+        "lyrics": "入らん！",
         "theme": "purple"
     },
+    # 14.50 - 17.16s: 同じカバン！同じギア！
     {
-        "start": 13.9, "end": 16.3, "img": 1, "trans": "fade", "fade_dur": 0.25, "zoom": 1.02,
-        "tag": "❓ キャンプ七不思議",
-        "top": "何も買ってないよ！？",
-        "bottom": "同じカバン！同じギア！",
+        "start": 14.50, "end": 17.16,
+        "img": 1, "trans": "fade", "fade_dur": 0.25, "zoom": 1.02,
+        "lyrics": "同じカバン！同じギア！",
         "theme": "blue"
     },
+    # 17.16 - 20.00s: 増えとらんに！増えとらんに！
     {
-        "start": 16.3, "end": 18.8, "img": 2, "trans": "fade", "fade_dur": 0.25, "zoom": 1.08,
-        "tag": "🌀 なんで膨張するの？",
-        "top": "シュラフ畳んだだけなのに！",
-        "bottom": "増えとらんに！増えとらんに！",
+        "start": 17.16, "end": 20.00,
+        "img": 2, "trans": "fade", "fade_dur": 0.25, "zoom": 1.08,
+        "lyrics": "増えとらんに！増えとらんに！",
         "theme": "coral"
     },
-    # Chorus (サビ：電波全開シャウト！)
+    # 20.00 - 22.42s: なんでだや！？パンパンだに！ (サビ突入！)
     {
-        "start": 18.8, "end": 21.0, "img": 2, "trans": "flash", "zoom": 1.22,
-        "tag": "🔥 サビ：電波全開絶叫！ 🔥",
-        "top": "なんでだや！？",
-        "bottom": "パンパンだに！",
+        "start": 20.00, "end": 22.42,
+        "img": 2, "trans": "flash", "zoom": 1.22,
+        "lyrics": "なんでだや！？パンパンだに！",
         "theme": "chorus_electric"
     },
+    # 22.42 - 24.86s: チャックがパンパンだら！
     {
-        "start": 21.0, "end": 23.3, "img": 2, "trans": "cut", "zoom": 1.18,
-        "tag": "⚡ はち切れ寸前 ⚡",
-        "top": "縫い目が悲鳴を上げとる！",
-        "bottom": "チャックがパンパンだら！",
+        "start": 22.42, "end": 24.86,
+        "img": 2, "trans": "cut", "zoom": 1.18,
+        "lyrics": "チャックがパンパンだら！",
         "theme": "chorus_yellow"
     },
+    # 24.86 - 26.54s: 行きはスッポリ！
     {
-        "start": 23.3, "end": 25.4, "img": 1, "trans": "fade", "fade_dur": 0.25, "zoom": 1.05,
-        "tag": "✨ 奇跡の過去回想",
-        "top": "あの美しいパッキング…",
-        "bottom": "行きはスッポリ！",
+        "start": 24.86, "end": 26.54,
+        "img": 1, "trans": "fade", "fade_dur": 0.25, "zoom": 1.06,
+        "lyrics": "行きはスッポリ！",
         "theme": "mint"
     },
+    # 26.54 - 29.62s: 帰りはパンパンだに！
     {
-        "start": 25.4, "end": 27.6, "img": 2, "trans": "cut", "zoom": 1.16,
-        "tag": "💥 残酷な現実",
-        "top": "パンパンすぎて閉まらん！",
-        "bottom": "帰りはパンパンだに！",
+        "start": 26.54, "end": 29.62,
+        "img": 2, "trans": "cut", "zoom": 1.18,
+        "lyrics": "帰りはパンパンだに！",
         "theme": "pink"
     },
+    # 29.62 - 31.52s: 入らん！入らん！
     {
-        "start": 27.6, "end": 30.0, "img": 2, "trans": "cut", "zoom": 1.14,
-        "tag": "😤 踏みつけ作戦発動",
-        "top": "体重かけても…！",
-        "bottom": "入らん！入らん！",
+        "start": 29.62, "end": 31.52,
+        "img": 2, "trans": "cut", "zoom": 1.14,
+        "lyrics": "入らん！入らん！",
         "theme": "orange"
     },
+    # 31.52 - 34.50s: ばか入らん！
     {
-        "start": 30.0, "end": 32.2, "img": 2, "trans": "cut", "zoom": 1.24,
-        "tag": "💢 怒りの遠州弁シャウト 💢",
-        "top": "頭抱えて絶叫！！",
-        "bottom": "ばか入らん！",
+        "start": 31.52, "end": 34.50,
+        "img": 2, "trans": "cut", "zoom": 1.24,
+        "lyrics": "ばか入らん！",
         "theme": "dark_red"
     },
-    # Climax Finale
+    # 34.50 - 37.14s: 行きは入った荷物が
     {
-        "start": 32.2, "end": 34.6, "img": 1, "trans": "fade", "fade_dur": 0.25, "zoom": 1.03,
-        "tag": "🏕️ 諦めずに詰め直す！",
-        "top": "最初からやり直しだ！",
-        "bottom": "行きは入った荷物が",
+        "start": 34.50, "end": 37.14,
+        "img": 1, "trans": "fade", "fade_dur": 0.25, "zoom": 1.03,
+        "lyrics": "行きは入った荷物が",
         "theme": "cyan"
     },
+    # 37.14 - 40.50s: 帰りは入らんだに！！
     {
-        "start": 34.6, "end": 36.9, "img": 2, "trans": "cut", "zoom": 1.12,
-        "tag": "😭 やっぱりダメでした",
-        "top": "どう頑張っても…",
-        "bottom": "帰りは入らんだに！",
-        "theme": "magenta"
-    },
-    {
-        "start": 36.9, "end": 39.2, "img": 1, "trans": "fade", "fade_dur": 0.2, "zoom": 1.05,
-        "tag": "✨ 夢なら醒めて！",
-        "top": "綺麗に収まるはずなのに！",
-        "bottom": "行きは入った荷物が",
-        "theme": "yellow"
-    },
-    {
-        "start": 39.2, "end": 41.5, "img": 2, "trans": "cut", "zoom": 1.20,
-        "tag": "🎉 魂のラストシャウト 🎉",
-        "top": "手で持って帰るしかない！！",
-        "bottom": "帰りは入らんだに！！",
+        "start": 37.14, "end": 40.50,
+        "img": 2, "trans": "cut", "zoom": 1.22,
+        "lyrics": "帰りは入らんだに！！",
         "theme": "rainbow"
     },
-    # Outro
+    # 40.50 - 45.00s: アウトロ (余韻)
     {
-        "start": 41.5, "end": 45.0, "img": 2, "trans": "fade", "fade_dur": 0.4, "zoom": 1.06,
-        "tag": "🏕️ キャンプあるある完 🏕️",
-        "top": "〜 チャック半開きで帰宅 〜",
-        "bottom": "パンパンだに！！",
+        "start": 40.50, "end": 45.00,
+        "img": 2, "trans": "fade", "fade_dur": 0.5, "zoom": 1.05,
+        "lyrics": "",
         "theme": "pink"
     }
 ]
 
 THEMES = {
     "pink": {
-        "text": (255, 40, 110), "stroke": (255, 255, 255), "shadow": (180, 15, 70),
-        "tag_bg": (255, 45, 115), "tag_text": (255, 255, 255), "top_bg": (255, 235, 245), "top_text": (220, 20, 90)
+        "text": (255, 45, 120), "stroke": (255, 255, 255), "shadow": (180, 15, 75)
     },
     "red": {
-        "text": (230, 20, 40), "stroke": (255, 255, 255), "shadow": (140, 5, 20),
-        "tag_bg": (225, 25, 45), "tag_text": (255, 255, 255), "top_bg": (255, 230, 230), "top_text": (200, 10, 30)
+        "text": (235, 20, 45), "stroke": (255, 255, 255), "shadow": (145, 5, 20)
     },
     "cyan": {
-        "text": (0, 150, 225), "stroke": (255, 255, 255), "shadow": (0, 80, 150),
-        "tag_bg": (0, 170, 245), "tag_text": (255, 255, 255), "top_bg": (225, 248, 255), "top_text": (0, 120, 200)
+        "text": (0, 155, 230), "stroke": (255, 255, 255), "shadow": (0, 85, 155)
     },
     "orange": {
-        "text": (245, 80, 20), "stroke": (255, 255, 255), "shadow": (160, 40, 10),
-        "tag_bg": (250, 90, 25), "tag_text": (255, 255, 255), "top_bg": (255, 240, 225), "top_text": (210, 60, 15)
+        "text": (250, 85, 20), "stroke": (255, 255, 255), "shadow": (165, 45, 10)
     },
     "yellow": {
-        "text": (245, 110, 10), "stroke": (255, 255, 255), "shadow": (160, 60, 5),
-        "tag_bg": (255, 180, 20), "tag_text": (40, 20, 0), "top_bg": (255, 250, 215), "top_text": (200, 80, 5)
+        "text": (250, 120, 10), "stroke": (255, 255, 255), "shadow": (170, 65, 5)
     },
     "mint": {
-        "text": (10, 170, 130), "stroke": (255, 255, 255), "shadow": (5, 100, 75),
-        "tag_bg": (20, 190, 145), "tag_text": (255, 255, 255), "top_bg": (225, 255, 245), "top_text": (10, 140, 105)
+        "text": (10, 175, 135), "stroke": (255, 255, 255), "shadow": (5, 105, 80)
     },
     "purple": {
-        "text": (130, 40, 220), "stroke": (255, 255, 255), "shadow": (80, 15, 150),
-        "tag_bg": (145, 50, 240), "tag_text": (255, 255, 255), "top_bg": (245, 230, 255), "top_text": (110, 30, 190)
+        "text": (135, 45, 225), "stroke": (255, 255, 255), "shadow": (85, 15, 155)
     },
     "blue": {
-        "text": (30, 90, 230), "stroke": (255, 255, 255), "shadow": (15, 50, 150),
-        "tag_bg": (40, 110, 245), "tag_text": (255, 255, 255), "top_bg": (230, 240, 255), "top_text": (20, 70, 200)
+        "text": (30, 95, 235), "stroke": (255, 255, 255), "shadow": (15, 55, 155)
     },
     "coral": {
-        "text": (235, 60, 85), "stroke": (255, 255, 255), "shadow": (160, 25, 45),
-        "tag_bg": (245, 75, 100), "tag_text": (255, 255, 255), "top_bg": (255, 235, 235), "top_text": (210, 45, 65)
-    },
-    "magenta": {
-        "text": (210, 25, 150), "stroke": (255, 255, 255), "shadow": (130, 10, 90),
-        "tag_bg": (225, 35, 165), "tag_text": (255, 255, 255), "top_bg": (255, 230, 250), "top_text": (180, 15, 125)
+        "text": (240, 65, 90), "stroke": (255, 255, 255), "shadow": (165, 30, 50)
     },
     "dark_red": {
-        "text": (255, 235, 50), "stroke": (210, 10, 30), "shadow": (30, 0, 10),
-        "tag_bg": (210, 10, 30), "tag_text": (255, 255, 255), "top_bg": (255, 220, 60), "top_text": (180, 10, 20)
+        "text": (255, 240, 50), "stroke": (215, 10, 35), "shadow": (40, 0, 10)
     },
     "chorus_electric": {
-        "text": (255, 235, 40), "stroke": (255, 20, 100), "shadow": (60, 10, 40),
-        "tag_bg": (255, 20, 100), "tag_text": (255, 255, 255), "top_bg": (255, 245, 170), "top_text": (220, 10, 80)
+        "text": (255, 240, 40), "stroke": (255, 20, 105), "shadow": (70, 10, 45)
     },
     "chorus_yellow": {
-        "text": (255, 30, 110), "stroke": (255, 255, 255), "shadow": (160, 10, 65),
-        "tag_bg": (255, 210, 30), "tag_text": (40, 20, 0), "top_bg": (255, 255, 200), "top_text": (220, 20, 90)
+        "text": (255, 35, 115), "stroke": (255, 255, 255), "shadow": (165, 10, 70)
     },
     "rainbow": {
-        "text": (255, 235, 50), "stroke": (230, 30, 120), "shadow": (40, 10, 80),
-        "tag_bg": (0, 200, 255), "tag_text": (255, 255, 255), "top_bg": (255, 230, 245), "top_text": (210, 20, 100)
+        "text": (255, 240, 50), "stroke": (235, 30, 125), "shadow": (50, 10, 90)
     }
 }
 
-# 画像の事前読み込み＆ブラー背景作成
 RAW_IMG1 = Image.open(IMG1_PATH).convert("RGB")
 RAW_IMG2 = Image.open(IMG2_PATH).convert("RGB")
 
 def make_blurred_bg(img):
-    # 1080x1920 に拡大してクロップ
     w, h = img.size
     target_aspect = WIDTH / float(HEIGHT)
     cur_aspect = w / float(h)
@@ -266,14 +238,14 @@ def make_blurred_bg(img):
         crop_box = (0, top, w, top + new_h)
 
     cropped = img.crop(crop_box).resize((WIDTH, HEIGHT), Image.Resampling.BILINEAR)
-    blurred = cropped.filter(ImageFilter.GaussianBlur(28))
+    blurred = cropped.filter(ImageFilter.GaussianBlur(32))
     dim = Image.new("RGB", (WIDTH, HEIGHT), (0, 0, 0))
-    return Image.blend(blurred, dim, 0.28)
+    return Image.blend(blurred, dim, 0.32)
 
 BG1 = make_blurred_bg(RAW_IMG1)
 BG2 = make_blurred_bg(RAW_IMG2)
 
-def draw_sticker_text(draw, cx, cy, text, font, fill_col, stroke_col, shadow_col, stroke_w=15, shadow_off=14):
+def draw_sticker_text(draw, cx, cy, text, font, fill_col, stroke_col, shadow_col, stroke_w=16, shadow_off=16):
     bbox = draw.textbbox((0, 0), text, font=font)
     tw = bbox[2] - bbox[0]
     th = bbox[3] - bbox[1]
@@ -296,7 +268,7 @@ def draw_sticker_text(draw, cx, cy, text, font, fill_col, stroke_col, shadow_col
     draw.text((x, y), text, font=font, fill=fill_col)
     return tw, th
 
-def fit_font_size(text, max_w, initial_size, min_size=42):
+def fit_font_size(text, max_w, initial_size, min_size=48):
     sz = initial_size
     dummy = Image.new("RGB", (10, 10))
     d = ImageDraw.Draw(dummy)
@@ -311,7 +283,7 @@ def fit_font_size(text, max_w, initial_size, min_size=42):
 def render_frame(f, total_frames):
     t = f / float(FPS)
 
-    # 現在のセグメント特定
+    # セグメント探索
     cur_idx = len(TIMELINE) - 1
     for idx, seg in enumerate(TIMELINE):
         if seg["start"] <= t < seg["end"]:
@@ -322,11 +294,11 @@ def render_frame(f, total_frames):
     prev_seg = TIMELINE[cur_idx - 1] if cur_idx > 0 else cur_seg
 
     seg_elapsed = t - cur_seg["start"]
-    seg_dur = cur_seg["end"] - cur_seg["start"]
 
-    # トランジション（フェード・カット）計算
+    # トランジション
     alpha = 1.0
     is_fading = False
+    flash_alpha = 0.0
     if cur_seg["trans"] == "fade" and cur_idx > 0:
         fade_dur = cur_seg.get("fade_dur", 0.3)
         if seg_elapsed < fade_dur:
@@ -335,10 +307,8 @@ def render_frame(f, total_frames):
     elif cur_seg["trans"] == "flash":
         if seg_elapsed < 0.15:
             flash_alpha = 1.0 - (seg_elapsed / 0.15)
-        else:
-            flash_alpha = 0.0
 
-    # 1. 背景の合成
+    # 背景合成
     cur_raw = RAW_IMG1 if cur_seg["img"] == 1 else RAW_IMG2
     prev_raw = RAW_IMG1 if prev_seg["img"] == 1 else RAW_IMG2
 
@@ -350,30 +320,28 @@ def render_frame(f, total_frames):
     else:
         bg = cur_bg.copy()
 
-    # 2. 前景イラスト（角丸ウインドウ＆ズーム）の作成
-    # ズーム率
+    # 前景イラストフレーム
     zoom = cur_seg.get("zoom", 1.0)
-    # BPM200 パルス (微細なリズムの鼓動)
     beat_phase = (t % BEAT_SEC) / BEAT_SEC
     pulse = math.sin(beat_phase * math.pi) * 0.02
     total_zoom = zoom + pulse
 
-    # シェイク（サビや叫び部分）
     shake_x = 0
     shake_y = 0
-    if "！" in cur_seg["bottom"] or "？" in cur_seg["bottom"]:
+    if "！" in cur_seg["lyrics"] or "？" in cur_seg["lyrics"]:
         if "chorus" in cur_seg["theme"] or "dark" in cur_seg["theme"] or "rainbow" in cur_seg["theme"]:
             shake_x = random.randint(-8, 8) if (f % 2 == 0) else 0
             shake_y = random.randint(-8, 8) if (f % 2 == 0) else 0
 
-    frame_w, frame_h = 1000, int(1000 * 572 / 1024)  # 1000 x 558
+    frame_w = 1000
+    frame_h = int(1000 * 572 / 1024)  # 558
     frame_x = (WIDTH - frame_w) // 2 + shake_x
-    frame_y = 480 + shake_y
+    # 画面の中央やや上寄りに配置し、上下のバランスを完璧に保つ
+    frame_y = 520 + shake_y
 
     def get_zoomed_cropped_image(raw_img, z):
         rw, rh = raw_img.size
         cw, ch = int(rw / z), int(rh / z)
-        # キャラクターの顔（やや上部・中央）を中心にクロップ
         cx = rw // 2
         cy = int(rh * 0.45)
         left = max(0, min(rw - cw, cx - cw // 2))
@@ -390,84 +358,57 @@ def render_frame(f, total_frames):
 
     # 角丸マスク
     mask = Image.new("L", (frame_w, frame_h), 0)
-    ImageDraw.Draw(mask).rounded_rectangle([0, 0, frame_w, frame_h], radius=32, fill=255)
+    ImageDraw.Draw(mask).rounded_rectangle([0, 0, frame_w, frame_h], radius=36, fill=255)
 
-    # ドロップシャドウ
-    shadow_mask = Image.new("RGBA", (frame_w + 30, frame_h + 30), (0, 0, 0, 0))
-    ImageDraw.Draw(shadow_mask).rounded_rectangle([15, 15, frame_w + 15, frame_h + 15], radius=32, fill=(0, 0, 0, 120))
-    shadow_blur = shadow_mask.filter(ImageFilter.GaussianBlur(12))
-    bg.paste(shadow_blur, (frame_x - 15, frame_y - 15), shadow_blur)
+    # シャドウ
+    shadow_mask = Image.new("RGBA", (frame_w + 32, frame_h + 32), (0, 0, 0, 0))
+    ImageDraw.Draw(shadow_mask).rounded_rectangle([16, 16, frame_w + 16, frame_h + 16], radius=36, fill=(0, 0, 0, 130))
+    shadow_blur = shadow_mask.filter(ImageFilter.GaussianBlur(14))
+    bg.paste(shadow_blur, (frame_x - 16, frame_y - 16), shadow_blur)
 
     # 前景貼り付け
     bg.paste(fg_composite, (frame_x, frame_y), mask)
 
-    # 白い太枠フレーム
+    # 白枠フレーム
     draw = ImageDraw.Draw(bg)
-    draw.rounded_rectangle([frame_x, frame_y, frame_x + frame_w, frame_y + frame_h], radius=32, outline=(255, 255, 255), width=8)
+    draw.rounded_rectangle([frame_x, frame_y, frame_x + frame_w, frame_y + frame_h], radius=36, outline=(255, 255, 255), width=8)
 
-    theme = THEMES.get(cur_seg["theme"], THEMES["pink"])
+    # 歌詞テキスト描画（歌詞以外の文字は一切描画しない）
+    lyrics = cur_seg["lyrics"].strip()
+    if lyrics:
+        theme = THEMES.get(cur_seg["theme"], THEMES["pink"])
 
-    # 3. 上部コンテンツ（Y: 160 〜 440）
-    # ヘッダー情報（曲名 ＆ テンポ）
-    hdr_font = get_font(30)
-    draw.text((70, 170), "⚡ BPM 200 ULTRA FAST RAP", font=hdr_font, fill=(255, 255, 255))
-    draw.text((WIDTH - 280, 170), "🏕️ パッキングあるある", font=hdr_font, fill=(255, 255, 255))
+        # 登場時の可愛いポップバウンス
+        entrance_scale = 1.0
+        if seg_elapsed < 0.16:
+            entrance_scale = 1.0 + (0.16 - seg_elapsed) * 1.0
+        scale = entrance_scale + pulse
 
-    # タグバッジ
-    tag_font = get_font(36)
-    tag_text = cur_seg["tag"]
-    tbb = draw.textbbox((0, 0), tag_text, font=tag_font)
-    tw, th = tbb[2] - tbb[0] + 44, tbb[3] - tbb[1] + 20
-    tx, ty = (WIDTH - tw) // 2, 230
-    draw.rounded_rectangle([tx, ty, tx + tw, ty + th], radius=22, fill=theme["tag_bg"])
-    draw.text((tx + 22, ty + 10), tag_text, font=tag_font, fill=theme["tag_text"])
+        usable_w = WIDTH - 140  # 940px (左右70pxセーフマージン)
 
-    # 上部サブテロップ（ツッコミ / 状況解説）
-    top_text = cur_seg["top"]
-    if top_text:
-        top_font, top_sz = fit_font_size(top_text, WIDTH - 160, 52)
-        pbb = draw.textbbox((0, 0), top_text, font=top_font)
-        pw, ph = pbb[2] - pbb[0] + 40, pbb[3] - pbb[1] + 20
-        px, py = (WIDTH - pw) // 2, 330
-        draw.rounded_rectangle([px, py, px + pw, py + ph], radius=20, fill=theme["top_bg"])
-        draw.text((px + 20, py + 10), top_text, font=top_font, fill=theme["top_text"])
+        # サビや短文なら大きく、長文なら画面内にぴったり収まるサイズ
+        if len(lyrics) <= 4:
+            base_sz = 140
+        elif len(lyrics) <= 6:
+            base_sz = 120
+        elif len(lyrics) <= 10:
+            base_sz = 100
+        else:
+            base_sz = 86
 
-    # 4. 下部メイン歌詞テロップ（Y: 1100 〜 1640）
-    # バウンス演出（登場時）
-    entrance_scale = 1.0
-    if seg_elapsed < 0.18:
-        entrance_scale = 1.0 + (0.18 - seg_elapsed) * 0.8
-    scale = entrance_scale + pulse
+        font, actual_sz = fit_font_size(lyrics, usable_w, int(base_sz * scale))
 
-    main_text = cur_seg["bottom"]
-    usable_w = WIDTH - 160  # 920px usable
+        # イラスト枠の下側（Y: 1320）に配置
+        lyric_center_y = 1330 + shake_y
 
-    # サビ・叫びなら特大フォント
-    base_sz = 108 if len(main_text) <= 6 else (96 if len(main_text) <= 10 else 82)
-    font, actual_sz = fit_font_size(main_text, usable_w, int(base_sz * scale))
+        draw_sticker_text(
+            draw, WIDTH // 2 + shake_x, lyric_center_y, lyrics, font,
+            theme["text"], theme["stroke"], theme["shadow"],
+            stroke_w=18, shadow_off=16
+        )
 
-    # 下部中央Y座標
-    lyric_center_y = 1320 + shake_y
-
-    # 可愛いステッカー文字描画
-    draw_sticker_text(
-        draw, WIDTH // 2 + shake_x, lyric_center_y, main_text, font,
-        theme["text"], theme["stroke"], theme["shadow"],
-        stroke_w=16, shadow_off=16
-    )
-
-    # 5. フッター装飾 ＆ プログレスバー（Y: 1680 〜 1820）
-    bar_y = 1710
-    bar_w = WIDTH - 160
-    draw.rounded_rectangle([80, bar_y, 80 + bar_w, bar_y + 14], radius=7, fill=(255, 255, 255, 120))
-    prog_w = int(bar_w * (t / 45.0))
-    draw.rounded_rectangle([80, bar_y, 80 + prog_w, bar_y + 14], radius=7, fill=theme["tag_bg"])
-
-    ft_font = get_font(32)
-    draw.text((WIDTH // 2 - 140, 1750), "✨ 高評価＆チャンネル登録 ✨", font=ft_font, fill=(255, 255, 255))
-
-    # サビの白フラッシュ演出
-    if cur_seg.get("trans") == "flash" and flash_alpha > 0:
+    # サビの白フラッシュ
+    if flash_alpha > 0:
         white = Image.new("RGB", (WIDTH, HEIGHT), (255, 255, 255))
         bg = Image.blend(bg, white, flash_alpha * 0.75)
 
@@ -506,7 +447,11 @@ def main():
         OUTPUT_PATH
     ]
     subprocess.run(cmd, check=True)
-    print(f"[SUCCESS] Illustrated Shorts MV generated at: {OUTPUT_PATH}")
+
+    # Downloadsにもコピー
+    import shutil
+    shutil.copy2(OUTPUT_PATH, DOWNLOADS_OUTPUT_PATH)
+    print(f"[SUCCESS] Updated Shorts MV generated at: {OUTPUT_PATH} and {DOWNLOADS_OUTPUT_PATH}")
 
 if __name__ == "__main__":
     main()
