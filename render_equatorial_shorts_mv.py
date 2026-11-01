@@ -15,10 +15,7 @@ def get_font(path, size):
     except:
         return ImageFont.load_default()
 
-def wrap_and_fit_text(draw, lines, max_w, max_h, start_size=110, min_size=42):
-    """
-    複数行または単一行のテキストが max_w x max_h に収まる最大フォントサイズと各行のバウンディングボックスを計算
-    """
+def wrap_and_fit_text(draw, lines, max_w, max_h, start_size=120, min_size=44):
     font_size = start_size
     while font_size >= min_size:
         font = get_font(FONT_HEAVY, font_size)
@@ -48,29 +45,42 @@ def wrap_and_fit_text(draw, lines, max_w, max_h, start_size=110, min_size=42):
     total_h = sum(b[1] for b in line_boxes) + line_spacing * (len(lines) - 1)
     return font, min_size, line_boxes, line_spacing, total_h
 
+# 歌詞以外のテキスト（間奏タグや英語ヘッダー等）は一切表示しない
+# 実測の精密タイムライン:
+# 20.0s: シャラマポ ギギギデ
+# 21.8s: アチャラパ ポン
+# 23.0s: ルパラパ チキチキ
+# 24.2s: チャンガラ ガッ
+# 25.4s: ミソベレ ペケペケ
+# 26.5s: ピャラピャラ ポッ
+# 27.6s: ビビリボ ババラボ
+# 28.8s: シュラララ チャ
+# 30.0s〜: 余韻・伴奏
 timeline = [
-    (0.00, 2.70, ["ガガゼト", "ムイムイ", "パラポラ ピー"]),
-    (2.70, 5.40, ["チェケダ", "ドロロト", "シュビドゥバ ドン"]),
+    (0.00, 2.70, ["ガガゼト ムイムイ", "パラポラ ピー"]),
+    (2.70, 5.40, ["チェケダ ドロロト", "シュビドゥバ ドン"]),
     (5.40, 9.90, ["キリマノ", "ルルッタ"]),
     (9.90, 12.40, ["ポロピロ マカラパ", "ポロピロ パン"]),
     (12.40, 15.00, ["ズンガラ ベッチャラ", "ポロピロ ペン"]),
-    (15.00, 19.90, ["[ 間 奏 ]", "RITUAL BEATS"]),
-    (19.90, 23.50, ["シャラマポ ギギギデ", "アチャラパ ポン"]),
-    (23.50, 27.10, ["ルパラパ チキチキ", "チャンガラ ガッ"]),
-    (27.10, 31.00, ["ミソベレ ペケペケ", "ピャラピャラ ポッ"]),
-    (31.00, 35.00, ["ビビリボ ババラボ", "シュラララ チャ"]),
-    (35.00, 37.84, ["ペケペケ ピャラピャラ", "シュラララ ソッ"]),
-    (37.84, 40.00, ["ポロピロ パン！！"])
+    (15.00, 20.00, []), # 間奏時は歌詞なし（無文字）
+    (20.00, 21.80, ["シャラマポ", "ギギギデ"]),
+    (21.80, 23.00, ["アチャラパ", "ポン"]),
+    (23.00, 24.20, ["ルパラパ", "チキチキ"]),
+    (24.20, 25.40, ["チャンガラ", "ガッ"]),
+    (25.40, 26.50, ["ミソベレ", "ペケペケ"]),
+    (26.50, 27.60, ["ピャラピャラ", "ポッ"]),
+    (27.60, 28.80, ["ビビリボ", "ババラボ"]),
+    (28.80, 31.00, ["シュラララ", "チャ"]),
+    (31.00, 40.00, []) # 伴奏・ラストフェード時は無文字
 ]
 
 palette = [
-    # bg, fg, accent, border
-    ((15, 12, 10), (255, 250, 240), (255, 69, 0), (255, 215, 0)),     # 呪術赤橙
-    ((20, 10, 25), (255, 240, 255), (220, 20, 60), (0, 255, 200)),     # 妖艶パープル
-    ((10, 22, 18), (240, 255, 245), (0, 230, 150), (255, 165, 0)),     # 熱帯密林グリーン
-    ((28, 8, 8), (255, 255, 255), (255, 40, 40), (255, 255, 0)),       # 警戒ブラッドレッド
-    ((12, 18, 30), (240, 250, 255), (0, 180, 255), (255, 99, 71)),     # 深海・夜影ブルー
-    ((30, 20, 5), (255, 255, 240), (255, 180, 0), (255, 50, 50)),      # 太陽・トーテムゴールド
+    ((15, 12, 10), (255, 250, 240), (255, 69, 0)),     # 呪術赤橙
+    ((20, 10, 25), (255, 240, 255), (220, 20, 60)),     # 妖艶パープル
+    ((10, 22, 18), (240, 255, 245), (0, 230, 150)),     # 熱帯密林グリーン
+    ((28, 8, 8), (255, 255, 255), (255, 40, 40)),       # 警戒ブラッドレッド
+    ((12, 18, 30), (240, 250, 255), (0, 180, 255)),     # 夜影ブルー
+    ((30, 20, 5), (255, 255, 240), (255, 180, 0)),      # トーテムゴールド
 ]
 
 width, height = 1080, 1920
@@ -88,9 +98,9 @@ print(f"[INFO] Rendering {total_frames} frames to {frames_dir}...")
 for f in range(total_frames):
     t = f / fps
     
-    seg_idx = len(timeline) - 1
-    current_lines = timeline[-1][2]
-    seg_start, seg_end = timeline[-1][0], timeline[-1][1]
+    seg_idx = 0
+    current_lines = []
+    seg_start, seg_end = 0.0, 40.0
     
     for idx, (st, en, lines) in enumerate(timeline):
         if st <= t < en:
@@ -102,83 +112,60 @@ for f in range(total_frames):
     seg_duration = max(0.1, seg_end - seg_start)
     progress_in_seg = (t - seg_start) / seg_duration
     
-    bg_col, fg_col, ac_col, bd_col = palette[seg_idx % len(palette)]
+    bg_col, fg_col, ac_col = palette[seg_idx % len(palette)]
     im = Image.new("RGB", (width, height), bg_col)
     draw = ImageDraw.Draw(im)
     
-    # 幾何学・トライバル風背景装飾
     center_x, center_y = width // 2, height // 2
     
-    # トライバルサークル（回転・脈動）
-    ring_radius = int(340 + 40 * math.sin(t * 8.0))
-    for r_offset in [-20, 0, 20]:
+    # 幾何学リング（トライバルな背景装飾）
+    ring_radius = int(320 + 35 * math.sin(t * 8.0))
+    for r_offset in [-15, 0, 15]:
         draw.ellipse([center_x - ring_radius + r_offset, center_y - ring_radius + r_offset,
                       center_x + ring_radius - r_offset, center_y + ring_radius - r_offset],
                      outline=(*ac_col[:3], ), width=2)
                      
-    # コーナーフレーム（YouTubeショートのUIに被らないセーフエリアガイド）
-    # 上部200px、下部300px、左右70pxをマージンとして確保
-    safe_left = 80
-    safe_right = width - 80
-    safe_top = 220
-    safe_bottom = height - 320
+    # YouTubeショートのUIセーフエリア（上下左右のマージン確保で見切れを完全防止）
+    safe_left = 90
+    safe_right = width - 90
+    safe_top = 260
+    safe_bottom = height - 350
     safe_w = safe_right - safe_left
     safe_h = safe_bottom - safe_top
     
-    # 枠線
-    draw.line([(safe_left, safe_top), (safe_left + 60, safe_top)], fill=bd_col, width=4)
-    draw.line([(safe_left, safe_top), (safe_left, safe_top + 60)], fill=bd_col, width=4)
-    draw.line([(safe_right, safe_top), (safe_right - 60, safe_top)], fill=bd_col, width=4)
-    draw.line([(safe_right, safe_top), (safe_right, safe_top + 60)], fill=bd_col, width=4)
-    draw.line([(safe_left, safe_bottom), (safe_left + 60, safe_bottom)], fill=bd_col, width=4)
-    draw.line([(safe_left, safe_bottom), (safe_left, safe_bottom - 60)], fill=bd_col, width=4)
-    draw.line([(safe_right, safe_bottom), (safe_right - 60, safe_bottom)], fill=bd_col, width=4)
-    draw.line([(safe_right, safe_bottom), (safe_right, safe_bottom - 60)], fill=bd_col, width=4)
-    
-    # 上下部ステータス / トライバルテキスト
-    tag_font = get_font(FONT_BOLD, 28)
-    draw.text((safe_left + 10, safe_top - 45), "EQUATORIAL TRIBAL FOLKLORE // JIZURA", fill=(180, 180, 180), font=tag_font)
-    time_str = f"{int(t//60):02d}:{int(t%60):02d}:{int((t*100)%100):02d}"
-    draw.text((safe_right - 180, safe_top - 45), time_str, fill=ac_col, font=tag_font)
-    
-    # 激しいカメラシェイク（キネティック・タイポグラフィのSLAM演出）
-    shake_x = 0
-    shake_y = 0
-    if progress_in_seg < 0.22:
-        # 切り替わり時の強烈なスラムシェイク
-        shake_intensity = int(24 * (1.0 - progress_in_seg / 0.22))
-        shake_x = random.randint(-shake_intensity, shake_intensity)
-        shake_y = random.randint(-shake_intensity, shake_intensity)
-    elif f % 2 == 0:
-        shake_x = random.randint(-3, 3)
-        shake_y = random.randint(-3, 3)
+    # 歌詞が存在する場合のみタイポグラフィを描画（純粋な歌詞のみ）
+    if current_lines:
+        shake_x = 0
+        shake_y = 0
+        if progress_in_seg < 0.20:
+            shake_intensity = int(22 * (1.0 - progress_in_seg / 0.20))
+            shake_x = random.randint(-shake_intensity, shake_intensity)
+            shake_y = random.randint(-shake_intensity, shake_intensity)
+        elif f % 2 == 0:
+            shake_x = random.randint(-2, 2)
+            shake_y = random.randint(-2, 2)
+            
+        font, font_size, line_boxes, line_spacing, total_h = wrap_and_fit_text(
+            draw, current_lines, max_w=safe_w - 40, max_h=safe_h - 60, start_size=135, min_size=52
+        )
         
-    # テキストの自動折返しとフォントサイズフィッティング（絶対に見切れない安全領域内）
-    font, font_size, line_boxes, line_spacing, total_h = wrap_and_fit_text(
-        draw, current_lines, max_w=safe_w - 40, max_h=safe_h - 60, start_size=125, min_size=48
-    )
-    
-    # 縦方向中央揃え
-    curr_y = (height - total_h) // 2 + shake_y
-    
-    for l_idx, line in enumerate(current_lines):
-        bbox = draw.textbbox((0, 0), line, font=font)
-        tw = bbox[2] - bbox[0]
-        th = bbox[3] - bbox[1]
-        curr_x = (width - tw) // 2 + shake_x
-        
-        # JIZURA風の多重レイヤードシャドウ（影・輪郭・グロー）
-        # 外側アクセントシャドウ
-        shadow_offset = max(6, int(font_size * 0.08))
-        draw.text((curr_x + shadow_offset, curr_y + shadow_offset), line, fill=ac_col, font=font)
-        draw.text((curr_x - shadow_offset, curr_y - shadow_offset), line, fill=(*ac_col[:3], ), font=font)
-        
-        # 縁取り黒ストローク
-        stroke_w = max(3, int(font_size * 0.05))
-        draw.text((curr_x, curr_y), line, fill=fg_col, font=font, stroke_width=stroke_w, stroke_fill=(0, 0, 0))
-        
-        curr_y += th + line_spacing
-        
+        curr_y = (height - total_h) // 2 + shake_y
+        for line in current_lines:
+            bbox = draw.textbbox((0, 0), line, font=font)
+            tw = bbox[2] - bbox[0]
+            th = bbox[3] - bbox[1]
+            curr_x = (width - tw) // 2 + shake_x
+            
+            # 多重アクセントシャドウ
+            shadow_offset = max(6, int(font_size * 0.08))
+            draw.text((curr_x + shadow_offset, curr_y + shadow_offset), line, fill=ac_col, font=font)
+            draw.text((curr_x - shadow_offset, curr_y - shadow_offset), line, fill=ac_col, font=font)
+            
+            # 縁取り黒ストローク＋本体文字
+            stroke_w = max(3, int(font_size * 0.05))
+            draw.text((curr_x, curr_y), line, fill=fg_col, font=font, stroke_width=stroke_w, stroke_fill=(0, 0, 0))
+            curr_y += th + line_spacing
+            
     # CRT走査線エフェクト
     for y in range(0, height, 6):
         draw.line([(0, y), (width, y)], fill=(0, 0, 0, 45))
@@ -186,10 +173,10 @@ for f in range(total_frames):
     frame_path = os.path.join(frames_dir, f"frame_{f:05d}.jpg")
     im.save(frame_path, quality=88)
     
-    if f % 150 == 0:
+    if f % 200 == 0:
         print(f"Render progress: {f}/{total_frames} ({int(f/total_frames*100)}%)")
 
-print("[INFO] Rendering done! Running FFmpeg to assemble MP4...")
+print("[INFO] Rendering done! Encoding with FFmpeg...")
 ffmpeg_cmd = [
     "ffmpeg", "-y",
     "-r", str(fps),
@@ -205,4 +192,4 @@ ffmpeg_cmd = [
     output_path
 ]
 subprocess.run(ffmpeg_cmd, check=True)
-print(f"[SUCCESS] YouTube Shorts MV ready at: {output_path}")
+print(f"[SUCCESS] Updated MV saved to: {output_path}")
