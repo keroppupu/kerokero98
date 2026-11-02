@@ -83,3 +83,10 @@ AI生成による女性アイドルバラード楽曲と、Whisper実測同期�
 あしおとが ひびく
 ららら ららら
 ```
+
+## 限界探索チャンネル - 地図から消えた廃村配信 (VTuber JIZURA MV)
+- **楽曲**: `haison_haishin.mp3` (ACE-Step 1.5 生成、女性ボーカル J-Rock)
+- **動画**: `haison_haishin_jizura_mv.mp4` (1080p Full HD JIZURA キネティック・タイポグラフィ MV)
+- **生成スクリプト**:
+  - `generate_song.py`: 分割生成・音声リファレンスによる声質維持・クロスフェード結合
+  - `render_haison_mv.py`: 歌声同期、目線加工写真・探索動画カットイン、JIZURAタイポグラフィ
