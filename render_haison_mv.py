@@ -1,15 +1,11 @@
 #!/usr/bin/env python3
 """
-render_jizura_mv_v3.py
-ユーザー指示に基づく全面修正版:
-1. 【音の合成】映像生成後にffmpegで音声を完全合成し、プレイヤー依存の無音バグを解消
-2. 【目線修正】目線（黒帯）を目の位置・角度に完全に合わせ、確実に目を覆うよう調整
-3. 【歌詞以外の文字削除】
-   - 英語サブタイトル削除
-   - 「LIVE ● REC」「同接: 〇〇人」などの画面UI文字削除
-   - 「NO SIGNAL」などのダミー演出文字削除
-   - 純粋に歌唱歌詞（日本語テキスト）のみをJIZURA（キネティック・タイポグラフィ）として画面内に表示
-4. 【歌詞見切れ防止】左右各160pxのセーフエリアで自動文字サイズ最適化
+render_jizura_mv_v4.py
+- 1分30秒以降（および全編）の歌唱タイミングを単語レベルでミリ秒完全一致に再調整
+- 背景画像・動画のズーム（Ken Burns効果）、クロップ位置切り替え（人物寄り／背景寄り）、スローパンを適用して使い回し感を完全解消
+- 歌詞のみのJIZURA（余計な英字・UIなし）
+- 歌詞見切れ防止セーフエリア（左右160px）
+- 音声完全合成
 """
 import os
 import sys
@@ -28,60 +24,68 @@ def get_font(path, size):
     except Exception:
         return ImageFont.load_default()
 
-# タイムライン定義: 純粋な歌詞のみ (start_t, end_t, lyrics_text, style_mode, bg_type)
+# 完全再アライメントしたタイムライン
+# (start_t, end_t, lyrics_text, style_mode, bg_type, zoom_mode)
+# zoom_mode: 'normal', 'zoom_in', 'zoom_out', 'face_focus', 'wide', 'pan_left', 'pan_right'
 TIMELINE = [
     # --- Intro ---
-    (0.00, 2.66, "はいどーも！\n限界探索チャンネルです！", "intro", "photo1"),
-    (2.66, 6.16, "今日はネットで噂の\n『地図から消えた廃村』来てます！", "warning", "video1"),
-    (6.16, 7.68, "みんな！", "shout", "video1"),
-    (7.68, 11.52, "高評価 & チャンネル登録\nよろしくね！", "intro", "photo1"),
+    (0.00, 2.66, "はいどーも！\n限界探索チャンネルです！", "intro", "photo1", "zoom_in"),
+    (2.66, 6.16, "今日はネットで噂の\n『地図から消えた廃村』来てます！", "warning", "video1", "normal"),
+    (6.16, 7.68, "みんな！", "shout", "video1", "zoom_in"),
+    (7.68, 11.52, "高評価 & チャンネル登録\nよろしくね！", "intro", "photo1", "face_focus"),
 
     # --- Aメロ ---
-    (11.52, 14.72, "画角ばっちり\nジンバル片手に", "fast", "video1"),
-    (14.72, 18.16, "立ち入り禁止の\nサビついたフェンス越え", "warning", "color"),
-    (18.16, 21.08, "「ここヤバくない？」\nカメラにウィンク", "intro", "photo1"),
-    (21.08, 24.56, "同接じわじわ\n伸びるアドレナリン", "fast", "color"),
-    (24.56, 27.84, "床の抜けそうな\n木造の廃旅館", "horror", "photo2"),
-    (27.84, 31.28, "ホコリの匂いと\nカビた黒電話", "horror", "video2"),
+    (11.52, 14.72, "画角ばっちり\nジンバル片手に", "fast", "video1", "pan_left"),
+    (14.72, 18.16, "立ち入り禁止の\nサビついたフェンス越え", "warning", "color", "normal"),
+    (18.16, 21.08, "「ここヤバくない？」\nカメラにウィンク", "intro", "photo1", "zoom_out"),
+    (21.08, 24.56, "同接じわじわ\n伸びるアドレナリン", "fast", "color", "normal"),
+    (24.56, 27.84, "床の抜けそうな\n木造の廃旅館", "horror", "photo2", "wide"),
+    (27.84, 31.28, "ホコリの匂いと\nカビた黒電話", "horror", "video2", "pan_right"),
 
     # --- Bメロ ---
-    (31.28, 36.40, "コメント欄は\n「うしろ！うしろ！」のお約束", "glitch", "video2"),
-    (36.40, 40.24, "はいはい いつものノリでしょ？\n分かってるって", "fast", "color"),
-    (40.24, 42.80, "やらせはしない主義だけど", "intro", "photo2"),
-    (42.80, 46.64, "ちょっとくらい盛るのが\nクリエイター魂", "fast", "color"),
-    (46.64, 50.32, "「おっと、今なんか\n音がしたような…？」", "horror", "video2"),
+    (31.28, 36.40, "コメント欄は\n「うしろ！うしろ！」のお約束", "glitch", "video2", "zoom_in"),
+    (36.40, 40.24, "はいはい いつものノリでしょ？\n分かってるって", "fast", "color", "normal"),
+    (40.24, 42.80, "やらせはしない主義だけど", "intro", "photo2", "face_focus"),
+    (42.80, 46.64, "ちょっとくらい盛るのが\nクリエイター魂", "fast", "color", "normal"),
+    (46.64, 50.32, "「おっと、今なんか\n音がしたような…？」", "horror", "video2", "wide"),
 
     # --- サビ1 ---
-    (50.32, 53.76, "ああ バズりたい！\nバズりたい！", "shout", "color"),
-    (53.76, 57.12, "深夜の廃墟で\n神回をプリーズ！", "climax", "video1"),
-    (57.20, 61.60, "懐中電灯の明かりが\n不自然にチカチカ", "glitch", "video2"),
-    (61.60, 64.96, "（あれ 演出じゃないよ\nガチでヤバいやつ？）", "warning", "photo2"),
+    (50.32, 53.76, "ああ バズりたい！\nバズりたい！", "shout", "color", "normal"),
+    (53.76, 57.12, "深夜の廃墟で\n神回をプリーズ！", "climax", "video1", "zoom_in"),
+    (57.20, 61.60, "懐中電灯の明かりが\n不自然にチカチカ", "glitch", "video2", "zoom_in"),
+    (61.60, 64.96, "（あれ 演出じゃないよ\nガチでヤバいやつ？）", "warning", "photo2", "zoom_out"),
 
     # --- Aメロ2 ---
-    (64.96, 67.28, "圏外ギリギリ", "glitch", "color"),
-    (67.28, 71.44, "電波が途切れる\nスパチャの通知もバグってループ", "glitch", "video2"),
-    (71.44, 74.88, "「気のせいだよね…」\n足音ペタ、ペタ", "horror", "color"),
-    (74.88, 78.08, "俺しかいないはずの\n長い廊下", "horror", "video2"),
-    (78.08, 81.28, "カメラを下ろして\nそっと振り返る", "horror", "photo2"),
-    (81.28, 86.24, "肉眼じゃ見えないのに\n画面（モニター）には映る『何か』", "glitch", "color"),
+    (64.96, 67.28, "圏外ギリギリ", "glitch", "color", "normal"),
+    (67.28, 71.44, "電波が途切れる\nスパチャの通知もバグってループ", "glitch", "video2", "pan_left"),
+    (71.44, 74.88, "「気のせいだよね…」\n足音ペタ、ペタ", "horror", "color", "normal"),
+    (74.88, 78.08, "俺しかいないはずの\n長い廊下", "horror", "video2", "pan_right"),
+    (78.08, 81.28, "カメラを下ろして\nそっと振り返る", "horror", "photo2", "face_focus"),
+    (81.28, 83.66, "肉眼じゃ見えないのに", "horror", "color", "normal"),
+    (83.66, 88.50, "画面（モニター）には映る\n『何か』", "glitch", "video2", "zoom_in"),
 
-    # --- Bメロ2 ---
-    (86.32, 91.92, "激流だったコメント欄が\n一斉にピタッと止まる", "horror", "video2"),
-    (91.92, 95.84, "数秒後、画面いっぱいの\n『逃げて』『逃げて』『逃げて』", "warning", "color"),
-    (95.84, 99.36, "やらせじゃない\nマジで無理！！", "shout", "video1"),
-    (99.36, 101.60, "三脚なんて捨てて\nとにかく走り出したい", "fast", "video1"),
-    (101.60, 106.40, "なのに足が床に\n張り付いたみたいに動かない", "horror", "photo2"),
+    # --- Bメロ2 (90秒〜徹底調整) ---
+    (88.50, 91.90, "激流だったコメント欄が", "horror", "video2", "pan_left"),
+    (91.90, 94.32, "一斉にピタッと止まる", "horror", "color", "normal"),
+    (94.32, 96.86, "数秒後、画面いっぱいの", "warning", "video1", "zoom_in"),
+    (96.86, 99.34, "『逃げて』『逃げて』『逃げて』", "warning", "color", "normal"),
+    (99.34, 101.54, "やらせじゃない\nマジで無理！！", "shout", "photo2", "face_focus"),
+    (101.54, 103.76, "三脚なんて捨てて", "fast", "video1", "pan_left"),
+    (103.76, 106.38, "とにかく走り出したい！", "fast", "video1", "zoom_in"),
+    (106.38, 108.56, "なのに足が床に", "horror", "color", "normal"),
+    (108.56, 112.54, "張り付いたみたいに\n動かない", "horror", "photo2", "zoom_in"),
 
-    # --- サビ2 ---
-    (106.40, 110.48, "ああ 帰りたい！\n帰りたい！", "shout", "color"),
-    (110.64, 112.96, "心霊スポットで\nガチ泣き土下座配信", "climax", "photo1"),
-    (112.96, 116.16, "息が切れる\n心臓が破裂しそう", "fast", "video1"),
-    (116.16, 118.88, "（追いかけてくるよ\nガチでヤバいやつ！）", "glitch", "video2"),
-    (118.88, 125.44, "登録者数より\n自分の命が大事！！", "shout", "color"),
-    (125.44, 131.60, "でも待って、\n出口のドアが開かないんだけど！！", "warning", "photo2"),
+    # --- サビ2 (112秒〜徹底調整) ---
+    (112.54, 115.32, "ああ 帰りたい！\n帰りたい！", "shout", "color", "normal"),
+    (115.32, 118.56, "心霊スポットで\nガチ泣き土下座配信", "climax", "photo1", "face_focus"),
+    (118.56, 122.50, "息が切れる\n心臓が破裂しそう", "fast", "video1", "pan_right"),
+    (122.50, 125.56, "（追いかけてくるよ\nガチでヤバいやつ！）", "glitch", "video2", "zoom_in"),
+    (125.56, 130.50, "登録者数より\n自分の命が大事！！", "shout", "color", "normal"),
+    (130.50, 134.50, "でも待って、\n出口のドアが…", "warning", "photo2", "wide"),
+    (134.50, 137.50, "開かないんだけど！！", "shout", "photo1", "zoom_in"),
 
-    # --- Outro (余韻・インスト) ---
-    (131.60, 146.00, "", "horror", "video2")
+    # --- Outro (137.5秒〜146秒) ---
+    (137.50, 146.00, "", "horror", "video2", "pan_left")
 ]
 
 PHOTO1_PATH = "/Users/pupu/Downloads/vtuber_song/preview/photo1_perfect_censor.jpg"
@@ -91,6 +95,71 @@ V2_DIR = "/Users/pupu/Downloads/vtuber_song/v2_frames"
 
 photo1_img = Image.open(PHOTO1_PATH).convert("RGB")
 photo2_img = Image.open(PHOTO2_PATH).convert("RGB")
+
+def apply_transform(img, progress, zoom_mode, width=1920, height=1080):
+    """
+    動的ズーム・パン・クロップ効果を適用して使い回し感を無くす
+    """
+    if zoom_mode == "normal":
+        return img
+
+    w, h = img.size
+    if zoom_mode == "zoom_in":
+        # 1.0 -> 1.25 にスムーズにズーム
+        scale = 1.0 + 0.25 * progress
+        crop_w = int(w / scale)
+        crop_h = int(h / scale)
+        cx, cy = w // 2, h // 2
+        box = (cx - crop_w // 2, cy - crop_h // 2, cx + crop_w // 2, cy + crop_h // 2)
+        return img.crop(box).resize((width, height), Image.Resampling.BILINEAR)
+
+    elif zoom_mode == "zoom_out":
+        # 1.25 -> 1.0 にズームアウト
+        scale = 1.25 - 0.25 * progress
+        crop_w = int(w / scale)
+        crop_h = int(h / scale)
+        cx, cy = w // 2, h // 2
+        box = (cx - crop_w // 2, cy - crop_h // 2, cx + crop_w // 2, cy + crop_h // 2)
+        return img.crop(box).resize((width, height), Image.Resampling.BILINEAR)
+
+    elif zoom_mode == "face_focus":
+        # 顔周りにクローズアップ (x: 1050, y: 350 付近を中心)
+        scale = 1.4 + 0.1 * math.sin(progress * math.pi)
+        crop_w = int(w / scale)
+        crop_h = int(h / scale)
+        cx = int(w * 0.58)
+        cy = int(h * 0.35)
+        x1 = max(0, min(w - crop_w, cx - crop_w // 2))
+        y1 = max(0, min(h - crop_h, cy - crop_h // 2))
+        return img.crop((x1, y1, x1 + crop_w, y1 + crop_h)).resize((width, height), Image.Resampling.BILINEAR)
+
+    elif zoom_mode == "wide":
+        # 引きの絵＋ゆっくり下から上へティルト
+        crop_w = int(w * 0.9)
+        crop_h = int(h * 0.9)
+        y1 = int((h - crop_h) * (0.8 - 0.6 * progress))
+        x1 = (w - crop_w) // 2
+        return img.crop((x1, y1, x1 + crop_w, y1 + crop_h)).resize((width, height), Image.Resampling.BILINEAR)
+
+    elif zoom_mode == "pan_left":
+        # 右から左へパン
+        scale = 1.15
+        crop_w = int(w / scale)
+        crop_h = int(h / scale)
+        x1 = int((w - crop_w) * (0.8 - 0.6 * progress))
+        y1 = (h - crop_h) // 2
+        return img.crop((x1, y1, x1 + crop_w, y1 + crop_h)).resize((width, height), Image.Resampling.BILINEAR)
+
+    elif zoom_mode == "pan_right":
+        # 左から右へパン
+        scale = 1.15
+        crop_w = int(w / scale)
+        crop_h = int(h / scale)
+        x1 = int((w - crop_w) * (0.2 + 0.6 * progress))
+        y1 = (h - crop_h) // 2
+        return img.crop((x1, y1, x1 + crop_w, y1 + crop_h)).resize((width, height), Image.Resampling.BILINEAR)
+
+    return img
 
 def get_video_frame(v_dir, t, max_frames=300):
     idx = int((t * 30) % max_frames) + 1
@@ -108,7 +177,7 @@ def render_frame(t, width, height, fps):
             seg = s
             break
 
-    start_t, end_t, text, style, bg_type = seg
+    start_t, end_t, text, style, bg_type, zoom_mode = seg
     progress = (t - start_t) / max(0.01, end_t - start_t)
 
     # カラーテーマ
@@ -123,23 +192,25 @@ def render_frame(t, width, height, fps):
     }
     bg_color, fg_color, ac_color = theme_colors.get(style, ((15, 15, 20), (255, 255, 255), (255, 50, 50)))
 
-    # 背景生成
+    # 背景生成 & ズーム/パン適用
     if bg_type == "photo1":
-        im = photo1_img.copy()
+        raw_bg = apply_transform(photo1_img, progress, zoom_mode, width, height)
         dark = Image.new("RGB", (width, height), (0, 0, 0))
-        im = Image.blend(im, dark, 0.40)
+        im = Image.blend(raw_bg, dark, 0.40)
     elif bg_type == "photo2":
-        im = photo2_img.copy()
+        raw_bg = apply_transform(photo2_img, progress, zoom_mode, width, height)
         dark = Image.new("RGB", (width, height), (0, 0, 0))
-        im = Image.blend(im, dark, 0.40)
+        im = Image.blend(raw_bg, dark, 0.40)
     elif bg_type == "video1":
-        im = get_video_frame(V1_DIR, t)
+        v_frame = get_video_frame(V1_DIR, t)
+        raw_bg = apply_transform(v_frame, progress, zoom_mode, width, height)
         dark = Image.new("RGB", (width, height), (0, 0, 0))
-        im = Image.blend(im, dark, 0.45)
+        im = Image.blend(raw_bg, dark, 0.45)
     elif bg_type == "video2":
-        im = get_video_frame(V2_DIR, t)
+        v_frame = get_video_frame(V2_DIR, t)
+        raw_bg = apply_transform(v_frame, progress, zoom_mode, width, height)
         dark = Image.new("RGB", (width, height), (0, 0, 0))
-        im = Image.blend(im, dark, 0.45)
+        im = Image.blend(raw_bg, dark, 0.45)
     else:
         im = Image.new("RGB", (width, height), bg_color)
 
@@ -157,14 +228,13 @@ def render_frame(t, width, height, fps):
     sx = random.randint(-shake_mag, shake_mag) if shake_mag else 0
     sy = random.randint(-shake_mag, shake_mag) if shake_mag else 0
 
-    # 警告ストライプ（歌詞以外の英語やUIは全撤廃し、グラフィック帯のみ適用）
+    # 警告ストライプ
     if style == "warning":
         stripe_h = 36
         for x in range(-stripe_h, width + stripe_h, stripe_h * 2):
             draw.polygon([(x, 0), (x + stripe_h, 0), (x, stripe_h), (x - stripe_h, stripe_h)], fill=(20, 20, 20))
             draw.polygon([(x, height - stripe_h), (x + stripe_h, height - stripe_h), (x, height), (x - stripe_h, height)], fill=(20, 20, 20))
 
-    # 歌詞テキストの描画（歌詞がない区間は背景のみ）
     if not text.strip():
         return im
 
@@ -209,7 +279,6 @@ def render_frame(t, width, height, fps):
         ly = start_y + i * line_height + sy
 
         if has_media_bg:
-            # 強い黒ストロークで視認性を確保
             stroke_r = max(4, int(target_fs * 0.09))
             for ox in range(-stroke_r, stroke_r + 1):
                 for oy in range(-stroke_r, stroke_r + 1):
@@ -229,7 +298,7 @@ def render_frame(t, width, height, fps):
 
 def main():
     audio_path = "/Users/pupu/Downloads/限界探索チャンネル_廃村配信.mp3"
-    temp_video = "/Users/pupu/Downloads/vtuber_song/temp_video_only.mp4"
+    temp_video = "/Users/pupu/Downloads/vtuber_song/temp_video_only_v4.mp4"
     output_mp4 = "/Users/pupu/Downloads/限界探索チャンネル_廃村配信_JIZURA_MV.mp4"
 
     width, height = 1920, 1080
@@ -243,9 +312,8 @@ def main():
     total_frames = int(duration * fps)
 
     print(f"[INFO] Audio duration: {duration:.2f}s, Total Frames: {total_frames}")
-    print(f"[INFO] Step 1: Rendering video stream to {temp_video}...")
+    print(f"[INFO] Step 1: Rendering video stream with zoom/pan transforms...")
 
-    # Step 1: 映像パイプをレンダリング
     ffmpeg_video_cmd = [
         "/opt/homebrew/bin/ffmpeg", "-y",
         "-f", "rawvideo",
@@ -253,7 +321,7 @@ def main():
         "-s", f"{width}x{height}",
         "-pix_fmt", "rgb24",
         "-r", str(fps),
-        "-i", "-",               # stdin pipe
+        "-i", "-",
         "-c:v", "libx264",
         "-preset", "fast",
         "-crf", "18",
@@ -278,8 +346,7 @@ def main():
     proc.wait()
     print("\n[INFO] Step 1 complete.")
 
-    # Step 2: 音声を完全合成（AAC 320kbps + 確実なストリームマッピング）
-    print(f"[INFO] Step 2: Merging audio {audio_path} into final video {output_mp4}...")
+    print(f"[INFO] Step 2: Merging audio {audio_path} into {output_mp4}...")
     ffmpeg_merge_cmd = [
         "/opt/homebrew/bin/ffmpeg", "-y",
         "-i", temp_video,
