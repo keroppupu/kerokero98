@@ -28,7 +28,7 @@ def get_safetensor(folder_name):
         raise FileNotFoundError(f"No safetensors found in {folder_name}")
     return files[0]
 
-# 指定モデル: 女性 = Tsukimiyama_Suma (月見山 須磨), 男性 = Ueda_Kanpei (上田 菅平)
+# 指定モデル: 女性 = Tsukimiyama_Suma (月見山 須磨), 男性 = Tobu_Yunomaru (東部 湯の丸)
 print("女性モデル (Tsukimiyama_Suma) ロード中...")
 model_f = TTSModel(
     model_path=get_safetensor("Tsukimiyama_Suma"),
@@ -37,21 +37,21 @@ model_f = TTSModel(
     device=device,
 )
 
-print("男性モデル (Ueda_Kanpei) ロード中...")
+print("男性モデル (Tobu_Yunomaru) ロード中...")
 model_m = TTSModel(
-    model_path=get_safetensor("Ueda_Kanpei"),
-    config_path=models_dir / "Ueda_Kanpei" / "config.json",
-    style_vec_path=models_dir / "Ueda_Kanpei" / "style_vectors.npy",
+    model_path=get_safetensor("Tobu_Yunomaru"),
+    config_path=models_dir / "Tobu_Yunomaru" / "config.json",
+    style_vec_path=models_dir / "Tobu_Yunomaru" / "style_vectors.npy",
     device=device,
 )
 
 # 台本構成:
-# 話し出しはフラット・落ち着いた語り口。
-# 時々感情が動くポイントでは intonation_scale や speed を自然に調整。
+# 女性: スマ (Tsukimiyama_Suma)
+# 男性: ユノ (Tobu_Yunomaru)
 script = [
     # --- 1. オープニング & 雑談 ---
     ("F", "Neutral", 0.0, 1.0, 1.0, 0.95, "リスナーのみなさん、こんにちは。週刊エーアイフロンティアへようこそ。パーソナリティのスマです。"),
-    ("M", "Neutral", 0.0, 1.0, 1.0, 0.95, "こんにちは。パートナーのカンペイです。スマさん、最近は朝晩ぐっと冷え込んできましたね。"),
+    ("M", "Neutral", 0.0, 1.0, 1.0, 0.95, "こんにちは。パートナーのユノです。スマさん、最近は朝晩ぐっと冷え込んできましたね。"),
     ("F", "Neutral", 0.0, 1.0, 1.0, 0.95, "そうですね。すっかり秋らしくなって、温かい飲み物が恋しい季節になりました。"),
     ("M", "Neutral", 0.0, 1.0, 1.0, 0.95, "気温は下がってきましたけど、生成エーアイ業界の動きは相変わらず激しいですね。"),
     ("F", "Neutral", 0.0, 1.0, 1.0, 0.95, "本当にそうですね。毎日のように新しい発表が続いていて、情報を追うだけでもなかなか大変です。"),
@@ -59,10 +59,10 @@ script = [
 
     # --- 2. トピック1：AnthropicのIPO申請と業績 ---
     ("F", "Neutral", 0.0, 1.0, 1.0, 0.95, "はい。まず最初のトピックですが、クロードを開発するアンスロピックがナスダック上場に向けてエスワンを提出しました。"),
-    ("M", "Neutral", 0.0, 1.0, 1.02, 1.15, "これは驚きましたね。ティッカーシンボルはエー・エヌ・ティー、アントを予定しているそうです。"),
+    ("M", "Neutral", 0.0, 1.0, 1.01, 1.10, "これは驚きましたね。ティッカーシンボルはエー・エヌ・ティー、アントを予定しているそうです。"),
     ("F", "Neutral", 0.0, 1.0, 1.0, 0.95, "書類の中で財務状況が初めて公表されたんですが、数字の伸びが非常に注目されています。"),
     ("M", "Neutral", 0.0, 1.0, 1.0, 0.95, "二千二十六年上半期の売上高が百六十三億ドル、日本円でおよそ二兆四千億円を超えていて、前年同期と比べて約十四倍の成長だそうです。"),
-    ("F", "Neutral", 0.0, 1.0, 1.02, 1.10, "一年で十四倍というのはすごい数字ですね。しかも売上の約八割がエーピーアイ経由という点も特徴的です。"),
+    ("F", "Neutral", 0.0, 1.0, 1.01, 1.08, "一年で十四倍というのはすごい数字ですね。しかも売上の約八割がエーピーアイ経由という点も特徴的です。"),
     ("M", "Neutral", 0.0, 1.0, 1.0, 0.95, "一般のチャット利用だけでなく、多くの企業が業務システムの中核としてクロードを組み込んでいる証拠ですね。"),
     ("F", "Neutral", 0.0, 1.0, 1.0, 0.95, "一方で、提出書類にはいくつかリスク要因についての記載もありましたね。"),
     ("M", "Neutral", 0.0, 0.98, 0.98, 0.90, "ええ。テスト環境の設定ミスによってモデルが一時的に外部システムへアクセスしてしまった事例や、安全確認のために次世代モデルの学習を一時停止したことなどが挙げられています。"),
@@ -71,7 +71,7 @@ script = [
     # --- 3. トピック2：OpenAIのGPT-6.1 Terra ---
     ("M", "Neutral", 0.0, 1.0, 1.0, 0.95, "そしてオープンエーアイからも新しい発表がありました。実務特化型の新モデル、ジーピーティーシックス点一テラです。"),
     ("F", "Neutral", 0.0, 1.0, 1.0, 0.95, "テラですね。デモを見た方も多いんじゃないでしょうか。"),
-    ("M", "Neutral", 0.0, 1.0, 1.02, 1.08, "パソコンの画面を視覚的に認識して、請求書の入力や複数ツールの操作を自律的にこなす様子はかなり印象的でしたね。"),
+    ("M", "Neutral", 0.0, 1.0, 1.01, 1.05, "パソコンの画面を視覚的に認識して、請求書の入力や複数ツールの操作を自律的にこなす様子はかなり印象的でしたね。"),
     ("F", "Neutral", 0.0, 1.0, 1.0, 0.95, "これまでのモデルは質問に答えてくれる相談相手という感じでしたが、テラは実際に手を動かす作業員のような立ち位置ですね。"),
     ("M", "Neutral", 0.0, 1.0, 1.0, 0.95, "まさに実務代行のエージェントですね。エーピーアイの利用料金も前世代から大幅に引き下げられました。"),
     ("F", "Neutral", 0.0, 1.0, 1.0, 0.95, "開発者にとってはかなり導入しやすくなりそうですね。"),
@@ -95,7 +95,7 @@ script = [
     ("F", "Neutral", 0.0, 1.0, 1.01, 1.05, "使ってみたいですね。ただ、こうしてふたりでお話しする時間だけは自分で続けたいです。"),
     ("M", "Neutral", 0.0, 1.0, 1.01, 1.05, "それは私も同じです。会話の楽しさは大切にしたいですね。"),
     ("F", "Neutral", 0.0, 1.0, 1.0, 0.95, "それでは、今週の配信はこのあたりで。お相手はスマと、"),
-    ("M", "Neutral", 0.0, 1.0, 1.0, 0.95, "カンペイでした。"),
+    ("M", "Neutral", 0.0, 1.0, 1.0, 0.95, "ユノでした。"),
     ("F", "Neutral", 0.0, 1.0, 1.0, 0.95, "また次回お会いしましょう。さようなら。"),
 ]
 
@@ -104,12 +104,12 @@ sample_rate = 44100
 pause_short = np.zeros(int(sample_rate * 0.45), dtype=np.int16)
 pause_section = np.zeros(int(sample_rate * 0.9), dtype=np.int16)
 
-print(f"\n合計 {len(script)} ターンの音声を生成します（女性: Tsukimiyama_Suma, 男性: Ueda_Kanpei）...")
+print(f"\n合計 {len(script)} ターンの音声を生成します（女性: Tsukimiyama_Suma, 男性: Tobu_Yunomaru）...")
 start_time = time.time()
 
 for idx, (speaker, style, weight, speed, pitch, intonation, text) in enumerate(script, 1):
     model = model_f if speaker == "F" else model_m
-    speaker_name = "スマ(女:Tsukimiyama)" if speaker == "F" else "カンペイ(男:Ueda)"
+    speaker_name = "スマ(女:Tsukimiyama)" if speaker == "F" else "ユノ(男:Tobu)"
     
     print(f"[{idx:02d}/{len(script)}] {speaker_name}: {text[:25]}...")
 
