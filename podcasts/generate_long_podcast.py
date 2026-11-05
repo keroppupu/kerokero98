@@ -28,14 +28,14 @@ def get_safetensor(folder_name):
         raise FileNotFoundError(f"No safetensors found in {folder_name}")
     return files[0]
 
-# ポッドキャスト向け明るく軽快なペア:
-# 女性: Chikumagawa_Sakaki (千曲川さかき - ハキハキと明るく元気な女性パーソナリティ)
+# ポッドキャスト向けペア:
+# 女性: jvnv-F2-jp (標準女性モデル2)
 # 男性: Sakura_Tokujiro (さくら徳次郎 - 爽やかで明るい若い男性パーソナリティ)
-print("女性モデル (Chikumagawa_Sakaki) ロード中...")
+print("女性モデル (jvnv-F2-jp) ロード中...")
 model_f = TTSModel(
-    model_path=get_safetensor("Chikumagawa_Sakaki"),
-    config_path=models_dir / "Chikumagawa_Sakaki" / "config.json",
-    style_vec_path=models_dir / "Chikumagawa_Sakaki" / "style_vectors.npy",
+    model_path=get_safetensor("jvnv-F2-jp"),
+    config_path=models_dir / "jvnv-F2-jp" / "config.json",
+    style_vec_path=models_dir / "jvnv-F2-jp" / "style_vectors.npy",
     device=device,
 )
 
@@ -55,8 +55,8 @@ model_m = TTSModel(
 
 script = [
     # --- 1. オープニング & 雑談 ---
-    ("F", 1.24, 1.05, 1.30, "リスナーのみなさんこんにちは！週刊エーアイフロンティアへようこそ！パーソナリティのサカキです！"),
-    ("M", 1.24, 1.04, 1.30, "こんにちは！パートナーのトクジローです！いやーサカキさん、最近朝晩ぐっと冷え込んできましたね！"),
+    ("F", 1.24, 1.05, 1.30, "リスナーのみなさんこんにちは！週刊エーアイフロンティアへようこそ！パーソナリティのアオイです！"),
+    ("M", 1.24, 1.04, 1.30, "こんにちは！パートナーのトクジローです！いやーアオイさん、最近朝晩ぐっと冷え込んできましたね！"),
     ("F", 1.23, 1.04, 1.28, "本当にそうですね！すっかり秋らしくなって、温かいカフェラテが手放せなくなりました！"),
     ("M", 1.25, 1.05, 1.32, "気温は下がってきましたけど、生成エーアイ業界の熱気だけは真夏以上の大フィーバーですよね！"),
     ("F", 1.26, 1.06, 1.35, "もう毎日寝て起きるたびに超弩級のニュースが飛び込んできて、ワクワクが止まりません！"),
@@ -96,10 +96,10 @@ script = [
 
     # --- 5. 雑談・エンディング ---
     ("F", 1.25, 1.05, 1.30, "こうして振り返ると、単なるおしゃべりボットから、自律して仕事を実行するエージェントへと完全に主役が交代した一週間でしたね！"),
-    ("M", 1.25, 1.05, 1.30, "本当にそうですね！サカキさん、自分の代わりにポッドキャストの編集を全部やってくれるエージェントがいたらどうしますか？"),
+    ("M", 1.25, 1.05, 1.30, "本当にそうですね！アオイさん、自分の代わりにポッドキャストの編集を全部やってくれるエージェントがいたらどうしますか？"),
     ("F", 1.27, 1.06, 1.35, "今すぐ欲しいです！でも、こうしてトクジローさんと楽しくおしゃべりする時間だけは、絶対に自分たちの手で続けたいですね！"),
     ("M", 1.27, 1.06, 1.35, "ハハハ、大賛成です！人と人との生きたコミュニケーションこそ最高の価値ですからね！"),
-    ("F", 1.25, 1.05, 1.30, "それでは今週のエーアイフロンティアはこのへんで！お相手はサカキと、"),
+    ("F", 1.25, 1.05, 1.30, "それでは今週のエーアイフロンティアはこのへんで！お相手はアオイと、"),
     ("M", 1.25, 1.05, 1.30, "トクジローでした！"),
     ("F", 1.26, 1.06, 1.35, "また次回お会いしましょう！さようなら！"),
 ]
@@ -115,7 +115,7 @@ start_time = time.time()
 
 for idx, (speaker, speed, pitch, intonation, text) in enumerate(script, 1):
     model = model_f if speaker == "F" else model_m
-    speaker_name = "サカキ(女:Chikumagawa)" if speaker == "F" else "トクジロー(男:Sakura)"
+    speaker_name = "アオイ(女:jvnv-F2)" if speaker == "F" else "トクジロー(男:Sakura)"
     
     print(f"[{idx:02d}/{len(script)}] {speaker_name} [spd={speed} pit={pitch} int={intonation}]: {text[:25]}...")
 
